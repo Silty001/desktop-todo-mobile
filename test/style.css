@@ -96,3 +96,15 @@ label { display: grid; gap: 4px; font-size: 13px; color: var(--sub); margin-bott
 .cats { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 6px; }
 .cats li { display: flex; gap: 6px; align-items: center; }
 .cats .color { width: 104px; flex: none; border-left: 10px solid var(--c); }
+
+/* "add to home screen" guide, shown in iPhone Safari only */
+.install {
+  position: sticky; top: 0; z-index: 5; display: flex; gap: 10px; align-items: flex-start;
+  margin: 0 auto; max-width: 640px; padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
+  background: var(--nav); border-bottom: 1px solid var(--line); font-size: 13px;
+}
+.install img { width: 40px; height: 40px; border-radius: 10px; flex: none; }
+.install b { display: block; font-size: 14px; }
+.install p { margin: 2px 0 0; color: var(--sub); }
+.install p svg { width: 16px; height: 16px; vertical-align: -3px; fill: none; stroke: var(--accent-text); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.install .icon { padding: 2px 6px; color: var(--sub); }
