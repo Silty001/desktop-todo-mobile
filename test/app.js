@@ -1,5 +1,6 @@
 import { firebaseConfig } from './firebase-config.js';
 import { createStore } from './store.js';
+import { enableDrag } from './drag.js';
 
 // Same six colors as the PC app's category palette.
 const PALETTE = [['コーラル', '#E07A5F'], ['はちみつ', '#E3B04B'], ['わかば', '#7DB58F'], ['そら', '#6FA8C9'], ['ふじ', '#A58BD1'], ['さくら', '#E88FA8']];
@@ -7,8 +8,9 @@ const NO_CATEGORY = '#F5DCCB';
 const WEEK = '日月火水木金土';
 const $ = id => document.getElementById(id);
 
-let store, user = null, data = { tasks: new Map(), categories: new Map() };
-const view = load('desktop-todo-view', { filter: 'open', category: '', byDue: false });
+let store, user = null, data = { tasks: new Map(), categories: new Map(), meta: new Map() };
+let drag = null, renderLater = false;
+const view = load('desktop-todo-view', { filter: 'open', category: '', byDue: false, page: 'todo' });
 let editing = null, signUpMode = false;
 
 function load(key, fallback) { try { return { ...fallback, ...JSON.parse(localStorage.getItem(key) || '{}') }; } catch { return fallback; } }
@@ -45,6 +47,8 @@ function byDue(a, b) { return (a.dueDate ? 0 : 1) - (b.dueDate ? 0 : 1) || Strin
 
 // ---- rendering ----
 function render() {
+  if (drag?.dragging) { renderLater = true; return; }
+  renderMemo();
   const all = tasks();
   const open = all.filter(t => !t.completed);
   $('countText').textContent = `未完了 ${open.length}件`;
@@ -89,6 +93,31 @@ function setSync(pending, error) {
 
 function showError(e) { console.error(e); setSync(false, e); }
 
+// ---- memo (the PC app's single memo, stored as meta/note) ----
+let memoTimer = null, memoUnsent = false;
+function renderMemo() {
+  for (const b of $('views').children) b.classList.toggle('on', b.dataset.view === view.page);
+  $('memoView').hidden = view.page !== 'memo';
+  $('todoView').hidden = view.page === 'memo';
+  $('countText').hidden = view.page === 'memo';
+  // Never overwrite what is being typed; a change from the PC shows once the box is left.
+  const body = data.meta?.get('note')?.body ?? '';
+  if (!memoUnsent && document.activeElement !== $('memoText') && $('memoText').value !== body) $('memoText').value = body;
+}
+function sendMemo() {
+  clearTimeout(memoTimer); memoTimer = null;
+  if (!memoUnsent) return;
+  memoUnsent = false;
+  put('meta', 'note', { body: $('memoText').value });
+}
+$('memoText').addEventListener('input', () => { memoUnsent = true; clearTimeout(memoTimer); memoTimer = setTimeout(sendMemo, 700); });
+$('memoText').addEventListener('blur', () => { sendMemo(); renderMemo(); });
+addEventListener('pagehide', sendMemo);
+$('views').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  sendMemo(); view.page = b.dataset.view; remember(); render();
+});
+
 // ---- tasks ----
 $('addForm').addEventListener('submit', e => {
   e.preventDefault();
@@ -101,6 +130,25 @@ $('addForm').addEventListener('submit', e => {
   });
   $('addInput').value = '';
   if (view.filter === 'done') { view.filter = 'open'; remember(); render(); }
+});
+
+// Long-press reorder ("いつもの順" only: in due-date order the dates decide the place).
+// Like the PC app, the task lands next to its new visible neighbour and hidden tasks keep their order.
+drag = enableDrag($('list'), {
+  enabled: () => !view.byDue,
+  onState: on => { if (!on && renderLater) { renderLater = false; setTimeout(render); } },
+  onDrop(id, shownIds) {
+    const full = tasks().sort(byOrder);
+    const item = full.find(t => t.id === id);
+    const index = shownIds.indexOf(id);
+    const neighbours = shownIds.filter(x => x !== id);
+    const others = full.filter(t => t.id !== id);
+    if (!item || neighbours.length === 0) return;
+    const dest = index < neighbours.length ? others.findIndex(t => t.id === neighbours[index]) : others.findIndex(t => t.id === neighbours.at(-1)) + 1;
+    others.splice(dest, 0, item);
+    others.forEach((t, i) => { if (t.sortOrder !== i) { t.sortOrder = i; put('tasks', t.id, { sortOrder: i }); } });
+    render();
+  },
 });
 
 $('list').addEventListener('click', e => {
@@ -269,6 +317,6 @@ store.onUser(u => {
   user = u;
   $('login').hidden = !!u;
   $('app').hidden = !u;
-  if (!u) { data = { tasks: new Map(), categories: new Map() }; setMode(false); return; }
+  if (!u) { data = { tasks: new Map(), categories: new Map(), meta: new Map() }; setMode(false); return; }
   store.watch(u.uid, (state, error) => { data = state; setSync(state.pending, error); render(); });
 });

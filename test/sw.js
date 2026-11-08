@@ -1,6 +1,6 @@
 // Network first, cache as fallback: updates show up whenever online, and the app still opens offline.
 // Firestore traffic is not cached here; the Firebase SDK keeps its own offline copy.
-const CACHE = 'desktop-todo-v2';
+const CACHE = 'desktop-todo-v3';
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', e => {

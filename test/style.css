@@ -108,3 +108,18 @@ label { display: grid; gap: 4px; font-size: 13px; color: var(--sub); margin-bott
 .install p { margin: 2px 0 0; color: var(--sub); }
 .install p svg { width: 16px; height: 16px; vertical-align: -3px; fill: none; stroke: var(--accent-text); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .install .icon { padding: 2px 6px; color: var(--sub); }
+
+/* ToDo / memo switch in the header */
+.views { display: flex; gap: 4px; }
+.views button { background: none; padding: 0 10px 0 0; border-radius: 0; font-size: 24px; font-weight: 700; color: var(--faint); }
+.views button.on { color: var(--ink); }
+.memo { margin-top: 12px; }
+.memo textarea {
+  height: calc(100dvh - 150px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); min-height: 240px;
+  border-radius: 18px; padding: 14px; line-height: 1.7; resize: none;
+}
+
+/* long-press reorder */
+.task { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.task.dragging { box-shadow: 0 10px 24px #5b4a4233; transform: scale(1.02); opacity: .96; transition: transform .12s; }
+.placeholder { list-style: none; border: 2px dashed var(--line-strong); border-radius: 14px; background: var(--nav); }

@@ -20,8 +20,8 @@ export async function createStore(config) {
     resetPassword: email => auth.sendPasswordResetEmail(a, email),
     signOut() { stops.forEach(stop => stop()); stops = []; return auth.signOut(a); },
     watch(uid, onChange) {
-      const state = { tasks: new Map(), categories: new Map(), pending: false };
-      for (const name of ['tasks', 'categories']) {
+      const state = { tasks: new Map(), categories: new Map(), meta: new Map(), pending: false };
+      for (const name of ['tasks', 'categories', 'meta']) {
         stops.push(fs.onSnapshot(fs.collection(db, 'users', uid, name), { includeMetadataChanges: true }, snap => {
           for (const change of snap.docChanges()) {
             if (change.type === 'removed') state[name].delete(change.doc.id);
@@ -46,6 +46,7 @@ function tryOutStore() {
   const state = {
     tasks: new Map(Object.entries(saved.tasks || {})),
     categories: new Map(Object.entries(saved.categories || {})),
+    meta: new Map(Object.entries(saved.meta || {})),
     pending: false,
   };
   let listener = null, userListener = null;
@@ -58,7 +59,7 @@ function tryOutStore() {
     watch(uid, onChange) { listener = onChange; onChange(state); },
     async put(uid, name, id, fields) {
       state[name].set(id, { ...state[name].get(id), ...fields, id, updatedAt: new Date().toISOString() });
-      try { localStorage.setItem(key, JSON.stringify({ tasks: Object.fromEntries(state.tasks), categories: Object.fromEntries(state.categories) })); } catch { }
+      try { localStorage.setItem(key, JSON.stringify({ tasks: Object.fromEntries(state.tasks), categories: Object.fromEntries(state.categories), meta: Object.fromEntries(state.meta) })); } catch { }
       listener?.(state);
     },
   };
@@ -83,5 +84,5 @@ function sampleData() {
       createdAt: new Date().toISOString(), timeLog: seconds ? [{ date: day(0), kind: '', seconds }] : [], deleted: false };
   });
   for (const [id, c] of Object.entries(cats)) cats[id] = { id, ...c, deleted: false };
-  return { tasks, categories: cats };
+  return { tasks, categories: cats, meta: { note: { id: 'note', body: '買い物：牛乳、卵\n来週の撮影は火曜の午後' } } };
 }

@@ -42,7 +42,10 @@
   <main id="app" class="app" hidden>
     <header class="top">
       <div>
-        <h1>ToDo</h1>
+        <nav class="views" id="views">
+          <button data-view="todo">ToDo</button>
+          <button data-view="memo">メモ</button>
+        </nav>
         <p class="sub" id="countText"></p>
       </div>
       <span class="sync" id="syncText"></span>
@@ -51,6 +54,10 @@
       </button>
     </header>
     <p class="banner" id="tryOutBanner" hidden>お試しモード：データはこの端末の中だけに保存され、PCとは同期しません。</p>
+    <section id="memoView" class="memo" hidden>
+      <textarea id="memoText" placeholder="メモ（PCアプリのメモと同じものです）" aria-label="メモ"></textarea>
+    </section>
+    <section id="todoView">
     <nav class="tabs" id="tabs">
       <button data-filter="open">未完了</button>
       <button data-filter="done">完了</button>
@@ -67,6 +74,7 @@
       <input id="addInput" placeholder="タスクを追加" enterkeyhint="done" maxlength="500" autocomplete="off">
       <button class="primary round" aria-label="追加">＋</button>
     </form>
+    </section>
   </main>
 
   <dialog id="taskSheet" class="sheet">
