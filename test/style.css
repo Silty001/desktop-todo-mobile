@@ -174,3 +174,6 @@ label { display: grid; gap: 4px; font-size: 13px; color: var(--sub); margin-bott
   box-shadow: 0 6px 18px #5b4a4240; white-space: nowrap;
 }
 .toast button { background: #fff3; color: #fff; padding: 6px 12px; border-radius: 999px; font-size: 13px; }
+
+/* keyboard up (set by app.js): no home-indicator space under the bar, and no blur that lags behind while it moves */
+body.keyboard .addbar { padding-bottom: 8px; backdrop-filter: none; background: var(--bg); }

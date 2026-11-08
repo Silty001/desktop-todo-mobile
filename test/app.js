@@ -317,6 +317,24 @@ $('installClose').addEventListener('click', () => {
   $('installHint').hidden = true;
   try { localStorage.setItem('desktop-todo-hint', JSON.stringify({ closed: true })); } catch { }
 });
+// iPhone keyboard: Safari does not move fixed elements with the keyboard, so the input bar can float far above it.
+// While the keyboard is up, pin each input bar to the top edge of the keyboard using the visual viewport.
+const vv = window.visualViewport;
+function placeBars() {
+  const typing = document.activeElement?.closest?.('.addbar');
+  const open = !!vv && !!typing && innerHeight - vv.height > 120;
+  document.body.classList.toggle('keyboard', open);
+  for (const bar of document.querySelectorAll('.addbar')) {
+    if (!open) { bar.style.removeProperty('top'); bar.style.removeProperty('bottom'); continue; }
+    bar.style.bottom = 'auto';
+    bar.style.top = (vv.offsetTop + vv.height - bar.offsetHeight) + 'px';
+  }
+}
+vv?.addEventListener('resize', placeBars);
+vv?.addEventListener('scroll', placeBars);
+addEventListener('focusin', () => setTimeout(placeBars, 50));
+addEventListener('focusout', () => setTimeout(placeBars, 50));
+
 addEventListener('online', () => setSync(false));
 addEventListener('offline', () => setSync(false));
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => { });
