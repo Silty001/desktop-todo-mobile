@@ -7,7 +7,7 @@ export const PERSON_COLORS = [['赤', '#D9534F'], ['山吹', '#D9A72E'], ['そ�
 const NOTE = 'note', NOTE_COLOR = '#B5A398';
 const CHARS_PER_MINUTE = 300;
 
-export function initScripts({ $, esc, put, meta, view, remember, confirmBox, newId, nowIso }) {
+export function initScripts({ $, esc, put, meta, view, remember, confirmBox, newId, nowIso, afterAdd = () => { } }) {
   let editingLine = null, undo = null, toastTimer = null;
 
   const people = () => meta().get('people')?.list ?? [];
@@ -82,7 +82,7 @@ export function initScripts({ $, esc, put, meta, view, remember, confirmBox, new
     const ps = people();
     if (who !== NOTE && ps.length === 2) $('speaker').value = ps.find(p => p.id !== who).id;
     $('speakerWrap').style.setProperty('--c', colorOf($('speaker').value));
-    requestAnimationFrame(() => $('scriptLines').lastElementChild?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
+    setTimeout(afterAdd, 30);
   });
 
   // ---- scripts ----

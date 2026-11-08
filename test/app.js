@@ -121,7 +121,7 @@ $('views').addEventListener('click', e => {
   sendMemo(); view.page = b.dataset.view; remember(); render();
 });
 
-const scriptPage = initScripts({ $, esc, put, meta: () => data.meta, view, remember, confirmBox: (...a) => confirmBox(...a), newId, nowIso });
+const scriptPage = initScripts({ $, esc, put, meta: () => data.meta, view, remember, confirmBox: (...a) => confirmBox(...a), newId, nowIso, afterAdd: () => alignToBar() });
 
 // ---- tasks ----
 $('addForm').addEventListener('submit', e => {
@@ -329,7 +329,28 @@ function placeBars() {
     bar.style.bottom = 'auto';
     bar.style.top = (vv.offsetTop + vv.height - bar.offsetHeight) + 'px';
   }
+  if (open) alignToBar();
 }
+// Like a chat: the newest line sits just above the input bar. With the keyboard up the page also moves down to close the gap.
+function alignToBar() {
+  const script = view.page === 'script';
+  const bar = script ? $('scriptAdd') : $('addForm');
+  const last = (script ? $('scriptLines') : $('list')).lastElementChild;
+  if (!bar || !last || !bar.getClientRects().length) return;
+  const delta = last.getBoundingClientRect().bottom + 10 - bar.getBoundingClientRect().top;
+  if (delta > 0 || document.body.classList.contains('keyboard')) scrollBy(0, delta);
+}
+// Typing like a chat app: sending keeps the keyboard up, and a tap anywhere else puts it away.
+// The send button must not take the focus (that is what closed the keyboard on every send).
+for (const button of document.querySelectorAll('.addbar button')) {
+  button.addEventListener('pointerdown', e => e.preventDefault());
+  button.addEventListener('mousedown', e => e.preventDefault());
+  button.addEventListener('click', () => button.closest('.addbar').querySelector('input')?.focus());
+}
+addEventListener('click', e => {
+  const typing = document.activeElement?.closest?.('.addbar');
+  if (typing && !e.target.closest('.addbar')) document.activeElement.blur();
+});
 vv?.addEventListener('resize', placeBars);
 vv?.addEventListener('scroll', placeBars);
 addEventListener('focusin', () => setTimeout(placeBars, 50));

@@ -177,3 +177,9 @@ label { display: grid; gap: 4px; font-size: 13px; color: var(--sub); margin-bott
 
 /* keyboard up (set by app.js): no home-indicator space under the bar, and no blur that lags behind while it moves */
 body.keyboard .addbar { padding-bottom: 8px; backdrop-filter: none; background: var(--bg); }
+/* keyboard up: a slim bar like a chat app, so more of the script stays in view */
+body.keyboard .addbar { padding: 6px 10px; gap: 6px; border-top-color: var(--line-strong); }
+body.keyboard .addbar input { padding: 7px 12px; }
+body.keyboard .addbar .round { width: 38px; height: 38px; font-size: 21px; }
+body.keyboard .speaker select { padding: 7px 8px 7px 24px; font-size: 13px; }
+body.keyboard .speaker::before { left: 10px; }
