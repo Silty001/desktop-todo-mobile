@@ -21,7 +21,9 @@
     <img src="icons/icon-192.png" alt="">
     <div>
       <b>ホーム画面に追加すると、アプリとして使えます</b>
-      <p>Safariの <svg viewBox="0 0 24 24" aria-label="共有"><path d="M12 15V3m0 0L8 7m4-4 4 4M7 10H5v11h14V10h-2"/></svg>（共有）を押し、「ホーム画面に追加」を選んでください。共有ボタンが見えないときは、右下の「…」から開けます。</p>
+      <p id="installIos" hidden>Safariの <svg viewBox="0 0 24 24" aria-label="共有"><path d="M12 15V3m0 0L8 7m4-4 4 4M7 10H5v11h14V10h-2"/></svg>（共有）を押し、「ホーム画面に追加」を選んでください。共有ボタンが見えないときは、右下の「…」から開けます。</p>
+      <p id="installAndroid" hidden>Chromeの右上のメニュー（︙）から「ホーム画面に追加」または「アプリをインストール」を選んでください。</p>
+      <button class="primary small" id="installButton" hidden>アプリとして入れる</button>
     </div>
     <button class="icon" id="installClose" aria-label="閉じる">✕</button>
   </aside>

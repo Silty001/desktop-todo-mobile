@@ -312,7 +312,28 @@ $('resetButton').addEventListener('click', async () => {
 
 // ---- start ----
 // iPhone Safari (not yet on the home screen): show how to add it. navigator.standalone exists only on iOS.
-if (navigator.standalone === false && !load('desktop-todo-hint', { closed: false }).closed) $('installHint').hidden = false;
+// "Add to home screen" guide. iPhone: steps for Safari. Android: Chrome offers an install prompt (shown as a button),
+// otherwise the steps for its menu. Not shown once opened from the home screen, or after ✕.
+const installed = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+let installPrompt = null;
+function showInstall(kind) {
+  if (installed || load('desktop-todo-hint', { closed: false }).closed) return;
+  $('installIos').hidden = kind !== 'ios';
+  $('installAndroid').hidden = kind !== 'android';
+  $('installButton').hidden = kind !== 'button';
+  $('installHint').hidden = false;
+}
+if (navigator.standalone === false) showInstall('ios');
+else if (/Android/i.test(navigator.userAgent)) showInstall('android');
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; showInstall('button'); });
+$('installButton').addEventListener('click', async () => {
+  if (!installPrompt) return;
+  installPrompt.prompt();
+  const choice = await installPrompt.userChoice.catch(() => null);
+  installPrompt = null;
+  if (choice?.outcome === 'accepted') $('installHint').hidden = true;
+});
+addEventListener('appinstalled', () => { $('installHint').hidden = true; });
 $('installClose').addEventListener('click', () => {
   $('installHint').hidden = true;
   try { localStorage.setItem('desktop-todo-hint', JSON.stringify({ closed: true })); } catch { }
