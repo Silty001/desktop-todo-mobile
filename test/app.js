@@ -1,6 +1,7 @@
 import { firebaseConfig } from './firebase-config.js';
 import { createStore } from './store.js';
 import { enableDrag } from './drag.js';
+import { initScripts } from './script.js';
 
 // Same six colors as the PC app's category palette.
 const PALETTE = [['コーラル', '#E07A5F'], ['はちみつ', '#E3B04B'], ['わかば', '#7DB58F'], ['そら', '#6FA8C9'], ['ふじ', '#A58BD1'], ['さくら', '#E88FA8']];
@@ -98,8 +99,10 @@ let memoTimer = null, memoUnsent = false;
 function renderMemo() {
   for (const b of $('views').children) b.classList.toggle('on', b.dataset.view === view.page);
   $('memoView').hidden = view.page !== 'memo';
-  $('todoView').hidden = view.page === 'memo';
-  $('countText').hidden = view.page === 'memo';
+  $('scriptView').hidden = view.page !== 'script';
+  $('todoView').hidden = view.page !== 'todo';
+  $('countText').hidden = view.page !== 'todo';
+  if (view.page === 'script') scriptPage.render();
   // Never overwrite what is being typed; a change from the PC shows once the box is left.
   const body = data.meta?.get('note')?.body ?? '';
   if (!memoUnsent && document.activeElement !== $('memoText') && $('memoText').value !== body) $('memoText').value = body;
@@ -117,6 +120,8 @@ $('views').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   sendMemo(); view.page = b.dataset.view; remember(); render();
 });
+
+const scriptPage = initScripts({ $, esc, put, meta: () => data.meta, view, remember, confirmBox: (...a) => confirmBox(...a), newId, nowIso });
 
 // ---- tasks ----
 $('addForm').addEventListener('submit', e => {
@@ -218,7 +223,7 @@ function confirmBox(text) {
 }
 
 // ---- settings and categories ----
-$('settingsButton').addEventListener('click', () => { renderCategories(); $('catMessage').textContent = ''; $('settingsSheet').showModal(); });
+$('settingsButton').addEventListener('click', () => { renderCategories(); scriptPage.renderPeople(); $('personMessage').textContent = ''; $('catMessage').textContent = ''; $('settingsSheet').showModal(); });
 
 function renderCategories() {
   $('accountText').textContent = store.tryOut ? 'お試しモード（同期なし）' : `ログイン中：${user.email}`;

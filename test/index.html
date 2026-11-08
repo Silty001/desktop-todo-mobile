@@ -45,6 +45,7 @@
         <nav class="views" id="views">
           <button data-view="todo"><svg viewBox="0 0 24 24"><path d="M4 6.5l1.6 1.6L8.5 5M4 12.5l1.6 1.6 2.9-3.1M4 18.5l1.6 1.6 2.9-3.1M11.5 6.5H20M11.5 12.5H20M11.5 18.5H20"/></svg>ToDo</button>
           <button data-view="memo"><svg viewBox="0 0 24 24"><path d="M6 3.5h9l3.5 3.5v13.5H6z"/><path d="M14.5 3.5V7.5h4M9 11h6.5M9 14.5h6.5M9 18h4"/></svg>メモ</button>
+          <button data-view="script"><svg viewBox="0 0 24 24"><path d="M5 4.5h11a2.5 2.5 0 0 1 2.5 2.5v13H7.5A2.5 2.5 0 0 1 5 17.5z"/><path d="M9 9h6M9 12.5h6M9 16h3.5"/></svg>台本</button>
         </nav>
         <p class="sub" id="countText"></p>
       </div>
@@ -56,6 +57,27 @@
     <p class="banner" id="tryOutBanner" hidden>お試しモード：データはこの端末の中だけに保存され、PCとは同期しません。</p>
     <section id="memoView" class="memo" hidden>
       <textarea id="memoText" placeholder="メモ（PCアプリのメモと同じものです）" aria-label="メモ"></textarea>
+    </section>
+    <section id="scriptView" class="scripts" hidden>
+      <div class="picker">
+        <select id="scriptSelect" aria-label="台本"></select>
+        <button class="small icon-btn" id="scriptMore" aria-label="台本の操作">…</button>
+        <button class="small" id="scriptNew">＋新しい台本</button>
+      </div>
+      <div class="stats-box" id="scriptStats" hidden>
+        <button class="stats-head" id="statsToggle" aria-label="まとめを開く・たたむ">
+          <span><b id="statLines"></b> セリフ</span><span><b id="statChars"></b> 文字</span><span><b id="statTime"></b></span><i>▾</i>
+        </button>
+        <div class="bars" id="statBars"></div>
+      </div>
+      <div class="tools"><span class="sub">タップで修正、長押しで並べ替え</span><button class="small" id="scriptCopy">テキストでコピー</button></div>
+      <ul class="script-lines" id="scriptLines"></ul>
+      <p class="empty" id="scriptEmpty" hidden></p>
+      <form class="addbar" id="scriptAdd">
+        <span class="speaker" id="speakerWrap"><select id="speaker" aria-label="話す人"></select></span>
+        <input id="lineInput" placeholder="セリフを入力" enterkeyhint="send" maxlength="1000" autocomplete="off">
+        <button class="primary round" aria-label="セリフを追加">＋</button>
+      </form>
     </section>
     <section id="todoView">
     <nav class="tabs" id="tabs">
@@ -105,6 +127,13 @@
         <button type="button" class="small" id="addCat">追加</button>
       </div>
       <p class="message" id="catMessage"></p>
+      <h3>台本の人物</h3>
+      <ul class="cats" id="personList"></ul>
+      <div class="row">
+        <input id="personName" placeholder="新しい人物の名前" maxlength="20">
+        <button type="button" class="small" id="addPerson">追加</button>
+      </div>
+      <p class="message" id="personMessage"></p>
       <div class="row end">
         <button type="button" class="small" id="signOutButton">ログアウト</button>
         <button type="button" class="small" id="resetTryOut" hidden>見本データに戻す</button>
@@ -113,6 +142,53 @@
       </div>
     </form>
   </dialog>
+
+  <dialog id="lineSheet" class="sheet">
+    <form method="dialog">
+      <h2>セリフの修正</h2>
+      <label>話す人<select id="lineWho"></select></label>
+      <label>セリフ<textarea id="lineText" rows="3" maxlength="1000"></textarea></label>
+      <div class="row end">
+        <button type="button" class="small danger" id="lineDelete">削除</button>
+        <button type="button" class="small" id="lineInsert">この下に1行足す</button>
+        <span class="grow"></span>
+        <button class="primary" value="save">閉じる</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="scriptMenu" class="sheet">
+    <form method="dialog">
+      <h2 id="scriptMenuTitle"></h2>
+      <div class="menu-list">
+        <button type="button" id="scriptRename">名前を変える</button>
+        <button type="button" id="scriptDuplicate">複製する</button>
+        <button type="button" class="danger" id="scriptDelete">削除する</button>
+      </div>
+      <div class="row end"><span class="grow"></span><button class="primary" value="close">閉じる</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="copySheet" class="sheet">
+    <form method="dialog">
+      <h2>テキストでコピー</h2>
+      <div class="chips2" id="copyFormats">
+        <button type="button" data-format="colon">名前：セリフ</button>
+        <button type="button" data-format="tab">名前 タブ セリフ</button>
+        <button type="button" data-format="text">セリフだけ</button>
+      </div>
+      <label class="check-row"><input type="checkbox" id="copyNotes">ト書きもコピーする</label>
+      <textarea id="copyPreview" rows="8" readonly></textarea>
+      <p class="message" id="copyMessage"></p>
+      <div class="row end">
+        <button value="close">閉じる</button>
+        <span class="grow"></span>
+        <button type="button" class="primary" id="copyButton">コピーする</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" hidden><span id="toastText"></span><button type="button" id="toastUndo">元に戻す</button></div>
 
   <dialog id="confirmSheet" class="sheet">
     <form method="dialog">

@@ -85,5 +85,15 @@ function sampleData() {
       createdAt: new Date().toISOString(), timeLog: seconds ? [{ date: day(0), kind: '', seconds }] : [], deleted: false };
   });
   for (const [id, c] of Object.entries(cats)) cats[id] = { id, ...c, deleted: false };
-  return { tasks, categories: cats, meta: { note: { id: 'note', body: '買い物：牛乳、卵\n来週の撮影は火曜の午後' } } };
+  const lines = [['note', '（BGM：のんびりした曲）'], ['reimu', 'こんにちは、霊夢よ。'], ['marisa', '魔理沙だぜ。今日は何をするんだ？'],
+    ['reimu', 'おいしいお茶の淹れ方を紹介するわ。'], ['marisa', 'お茶なら毎日飲んでるけど、コツがあるのか？'], ['reimu', 'お湯の温度がいちばん大事なのよ。'],
+    ['marisa', '熱湯じゃだめなのか？'], ['reimu', '緑茶なら70〜80度くらいがいいわね。'], ['note', '（場面：急須のアップ）'], ['marisa', 'へえ、思ったより低いんだな。']]
+    .map(([who, text], i) => ({ id: 'line-' + i, who, text }));
+  return {
+    tasks, categories: cats, meta: {
+      note: { id: 'note', body: '買い物：牛乳、卵\n来週の撮影は火曜の午後' },
+      people: { id: 'people', list: [{ id: 'reimu', name: '霊夢', color: '#D9534F' }, { id: 'marisa', name: '魔理沙', color: '#D9A72E' }] },
+      'script_sample': { id: 'script_sample', kind: 'script', title: '第1話 お茶の淹れ方', lines, createdAt: new Date().toISOString(), deleted: false },
+    },
+  };
 }

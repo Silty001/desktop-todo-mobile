@@ -17,7 +17,7 @@ function slide(elements, change) {
   }
 }
 
-export function enableDrag(list, { enabled, onDrop, onState }) {
+export function enableDrag(list, { enabled, onDrop, onState, item = '.task', ignore = '.check' }) {
   let timer = null, start = null, drag = null, suppressClick = false, settling = false;
 
   function pick(li, y) {
@@ -73,8 +73,8 @@ export function enableDrag(list, { enabled, onDrop, onState }) {
     setTimeout(() => { settling = false; onState?.(false); }, 220);
   }
   function press(target, x, y) {
-    const li = target.closest('.task');
-    if (!li || target.closest('.check') || !enabled()) return;
+    const li = target.closest(item);
+    if (!li || target.closest(ignore) || !enabled()) return;
     start = { x, y };
     timer = setTimeout(() => { timer = null; pick(li, y); }, HOLD);
   }
@@ -102,6 +102,6 @@ export function enableDrag(list, { enabled, onDrop, onState }) {
 
   // The click that ends a hold must not open the task.
   list.addEventListener('click', e => { if (suppressClick) { suppressClick = false; e.stopPropagation(); e.preventDefault(); } }, true);
-  list.addEventListener('contextmenu', e => { if (e.target.closest('.task')) e.preventDefault(); });
+  list.addEventListener('contextmenu', e => { if (e.target.closest(item)) e.preventDefault(); });
   return { get busy() { return !!drag || settling; } };
 }
