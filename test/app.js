@@ -47,7 +47,7 @@ function byDue(a, b) { return (a.dueDate ? 0 : 1) - (b.dueDate ? 0 : 1) || Strin
 
 // ---- rendering ----
 function render() {
-  if (drag?.dragging) { renderLater = true; return; }
+  if (drag?.busy) { renderLater = true; return; }
   renderMemo();
   const all = tasks();
   const open = all.filter(t => !t.completed);

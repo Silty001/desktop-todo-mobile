@@ -110,9 +110,14 @@ label { display: grid; gap: 4px; font-size: 13px; color: var(--sub); margin-bott
 .install .icon { padding: 2px 6px; color: var(--sub); }
 
 /* ToDo / memo switch in the header */
-.views { display: flex; gap: 4px; }
-.views button { background: none; padding: 0 10px 0 0; border-radius: 0; font-size: 24px; font-weight: 700; color: var(--faint); }
-.views button.on { color: var(--ink); }
+.views { display: inline-flex; gap: 4px; padding: 4px; background: var(--nav); border: 1.5px solid var(--line); border-radius: 999px; }
+.views button {
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; border-radius: 999px;
+  background: none; color: var(--sub); font-size: 15px; font-weight: 700; transition: background .15s, color .15s;
+}
+.views button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.views button.on { background: var(--accent-fill); color: #fff; box-shadow: 0 2px 6px #e07a5f55; }
+.top .sub { margin-top: 4px; }
 .memo { margin-top: 12px; }
 .memo textarea {
   height: calc(100dvh - 150px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); min-height: 240px;
