@@ -230,7 +230,7 @@ function setMode(signUp) {
   $('loginButton').textContent = signUp ? 'アカウントを作る' : 'ログイン';
   $('modeButton').textContent = signUp ? 'アカウントを持っている（ログイン）' : 'はじめて使う（アカウントを作る）';
   $('password').autocomplete = signUp ? 'new-password' : 'current-password';
-  $('loginMessage').textContent = signUp ? 'パスワードは6文字以上。家族それぞれが自分のアカウントを作ります。' : '';
+  $('loginMessage').textContent = signUp ? 'パスワードは6文字以上にしてください。' : '';
   $('loginMessage').className = 'message';
 }
 $('modeButton').addEventListener('click', () => setMode(!signUpMode));
@@ -253,6 +253,12 @@ $('resetButton').addEventListener('click', async () => {
 });
 
 // ---- start ----
+// iPhone Safari (not yet on the home screen): show how to add it. navigator.standalone exists only on iOS.
+if (navigator.standalone === false && !load('desktop-todo-hint', { closed: false }).closed) $('installHint').hidden = false;
+$('installClose').addEventListener('click', () => {
+  $('installHint').hidden = true;
+  try { localStorage.setItem('desktop-todo-hint', JSON.stringify({ closed: true })); } catch { }
+});
 addEventListener('online', () => setSync(false));
 addEventListener('offline', () => setSync(false));
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => { });
