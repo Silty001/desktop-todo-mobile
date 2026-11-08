@@ -1,0 +1,20 @@
+rules_version = '2';
+// Each person reads and writes only their own data under users/{their uid}.
+// Paste this into Firebase console > Firestore Database > Rules, then publish.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/{collection}/{id} {
+      allow read, delete: if signedInAs(uid) && collection in ['tasks', 'categories', 'meta'];
+      allow create, update: if signedInAs(uid) && validDoc(collection, request.resource.data);
+    }
+    function signedInAs(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+    function validDoc(collection, d) {
+      return (collection == 'tasks' && d.title is string && d.title.size() <= 500
+                && (!('timeLog' in d) || d.timeLog.size() <= 2000))
+          || (collection == 'categories' && d.name is string && d.name.size() <= 40)
+          || collection == 'meta';
+    }
+  }
+}
