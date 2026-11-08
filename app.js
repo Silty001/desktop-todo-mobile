@@ -1,5 +1,7 @@
 import { firebaseConfig } from './firebase-config.js';
 import { createStore } from './store.js';
+import { enableDrag } from './drag.js';
+import { initScripts } from './script.js';
 
 // Same six colors as the PC app's category palette.
 const PALETTE = [['コーラル', '#E07A5F'], ['はちみつ', '#E3B04B'], ['わかば', '#7DB58F'], ['そら', '#6FA8C9'], ['ふじ', '#A58BD1'], ['さくら', '#E88FA8']];
@@ -7,8 +9,9 @@ const NO_CATEGORY = '#F5DCCB';
 const WEEK = '日月火水木金土';
 const $ = id => document.getElementById(id);
 
-let store, user = null, data = { tasks: new Map(), categories: new Map() };
-const view = load('desktop-todo-view', { filter: 'open', category: '', byDue: false });
+let store, user = null, data = { tasks: new Map(), categories: new Map(), meta: new Map() };
+let drag = null, renderLater = false;
+const view = load('desktop-todo-view', { filter: 'open', category: '', byDue: false, page: 'todo' });
 let editing = null, signUpMode = false;
 
 function load(key, fallback) { try { return { ...fallback, ...JSON.parse(localStorage.getItem(key) || '{}') }; } catch { return fallback; } }
@@ -45,6 +48,8 @@ function byDue(a, b) { return (a.dueDate ? 0 : 1) - (b.dueDate ? 0 : 1) || Strin
 
 // ---- rendering ----
 function render() {
+  if (drag?.busy) { renderLater = true; return; }
+  renderMemo();
   const all = tasks();
   const open = all.filter(t => !t.completed);
   $('countText').textContent = `未完了 ${open.length}件`;
@@ -89,6 +94,35 @@ function setSync(pending, error) {
 
 function showError(e) { console.error(e); setSync(false, e); }
 
+// ---- memo (the PC app's single memo, stored as meta/note) ----
+let memoTimer = null, memoUnsent = false;
+function renderMemo() {
+  for (const b of $('views').children) b.classList.toggle('on', b.dataset.view === view.page);
+  $('memoView').hidden = view.page !== 'memo';
+  $('scriptView').hidden = view.page !== 'script';
+  $('todoView').hidden = view.page !== 'todo';
+  $('countText').hidden = view.page !== 'todo';
+  if (view.page === 'script') scriptPage.render();
+  // Never overwrite what is being typed; a change from the PC shows once the box is left.
+  const body = data.meta?.get('note')?.body ?? '';
+  if (!memoUnsent && document.activeElement !== $('memoText') && $('memoText').value !== body) $('memoText').value = body;
+}
+function sendMemo() {
+  clearTimeout(memoTimer); memoTimer = null;
+  if (!memoUnsent) return;
+  memoUnsent = false;
+  put('meta', 'note', { body: $('memoText').value });
+}
+$('memoText').addEventListener('input', () => { memoUnsent = true; clearTimeout(memoTimer); memoTimer = setTimeout(sendMemo, 700); });
+$('memoText').addEventListener('blur', () => { sendMemo(); renderMemo(); });
+addEventListener('pagehide', sendMemo);
+$('views').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  sendMemo(); view.page = b.dataset.view; remember(); render();
+});
+
+const scriptPage = initScripts({ $, esc, put, meta: () => data.meta, view, remember, confirmBox: (...a) => confirmBox(...a), newId, nowIso, afterAdd: () => alignToBar() });
+
 // ---- tasks ----
 $('addForm').addEventListener('submit', e => {
   e.preventDefault();
@@ -101,6 +135,25 @@ $('addForm').addEventListener('submit', e => {
   });
   $('addInput').value = '';
   if (view.filter === 'done') { view.filter = 'open'; remember(); render(); }
+});
+
+// Long-press reorder ("いつもの順" only: in due-date order the dates decide the place).
+// Like the PC app, the task lands next to its new visible neighbour and hidden tasks keep their order.
+drag = enableDrag($('list'), {
+  enabled: () => !view.byDue,
+  onState: on => { if (!on && renderLater) { renderLater = false; setTimeout(render); } },
+  onDrop(id, shownIds) {
+    const full = tasks().sort(byOrder);
+    const item = full.find(t => t.id === id);
+    const index = shownIds.indexOf(id);
+    const neighbours = shownIds.filter(x => x !== id);
+    const others = full.filter(t => t.id !== id);
+    if (!item || neighbours.length === 0) return;
+    const dest = index < neighbours.length ? others.findIndex(t => t.id === neighbours[index]) : others.findIndex(t => t.id === neighbours.at(-1)) + 1;
+    others.splice(dest, 0, item);
+    others.forEach((t, i) => { if (t.sortOrder !== i) { t.sortOrder = i; put('tasks', t.id, { sortOrder: i }); } });
+    render();
+  },
 });
 
 $('list').addEventListener('click', e => {
@@ -170,11 +223,12 @@ function confirmBox(text) {
 }
 
 // ---- settings and categories ----
-$('settingsButton').addEventListener('click', () => { renderCategories(); $('catMessage').textContent = ''; $('settingsSheet').showModal(); });
+$('settingsButton').addEventListener('click', () => { renderCategories(); scriptPage.renderPeople(); $('personMessage').textContent = ''; $('catMessage').textContent = ''; $('settingsSheet').showModal(); });
 
 function renderCategories() {
   $('accountText').textContent = store.tryOut ? 'お試しモード（同期なし）' : `ログイン中：${user.email}`;
   $('signOutButton').hidden = store.tryOut;
+  $('resetTryOut').hidden = !store.tryOut;
   $('catList').innerHTML = categories().map(c => `<li data-id="${esc(c.id)}">
     <select class="color" aria-label="色" style="--c:${esc(c.color)}">${PALETTE.map(([n, v]) => `<option value="${v}" ${v.toUpperCase() === String(c.color).toUpperCase() ? 'selected' : ''}>${n}</option>`).join('')}</select>
     <input class="name" value="${esc(c.name)}" maxlength="40" aria-label="名前">
@@ -209,6 +263,10 @@ $('addCat').addEventListener('click', () => {
   put('categories', newId(), { name, color: PALETTE[list.length % PALETTE.length][1], sortOrder: list.length ? Math.max(...list.map(c => c.sortOrder ?? 0)) + 1 : 0, deleted: false });
   $('catName').value = ''; $('catMessage').textContent = '';
   setTimeout(renderCategories);
+});
+$('resetTryOut').addEventListener('click', () => {
+  try { localStorage.removeItem('desktop-todo-tryout'); } catch { }
+  location.reload();
 });
 $('signOutButton').addEventListener('click', () => { $('settingsSheet').close(); store.signOut(); });
 
@@ -259,6 +317,45 @@ $('installClose').addEventListener('click', () => {
   $('installHint').hidden = true;
   try { localStorage.setItem('desktop-todo-hint', JSON.stringify({ closed: true })); } catch { }
 });
+// iPhone keyboard: Safari does not move fixed elements with the keyboard, so the input bar can float far above it.
+// While the keyboard is up, pin each input bar to the top edge of the keyboard using the visual viewport.
+const vv = window.visualViewport;
+function placeBars() {
+  const typing = document.activeElement?.closest?.('.addbar');
+  const open = !!vv && !!typing && innerHeight - vv.height > 120;
+  document.body.classList.toggle('keyboard', open);
+  for (const bar of document.querySelectorAll('.addbar')) {
+    if (!open) { bar.style.removeProperty('top'); bar.style.removeProperty('bottom'); continue; }
+    bar.style.bottom = 'auto';
+    bar.style.top = (vv.offsetTop + vv.height - bar.offsetHeight) + 'px';
+  }
+  if (open) alignToBar();
+}
+// Like a chat: the newest line sits just above the input bar. With the keyboard up the page also moves down to close the gap.
+function alignToBar() {
+  const script = view.page === 'script';
+  const bar = script ? $('scriptAdd') : $('addForm');
+  const last = (script ? $('scriptLines') : $('list')).lastElementChild;
+  if (!bar || !last || !bar.getClientRects().length) return;
+  const delta = last.getBoundingClientRect().bottom + 10 - bar.getBoundingClientRect().top;
+  if (delta > 0 || document.body.classList.contains('keyboard')) scrollBy(0, delta);
+}
+// Typing like a chat app: sending keeps the keyboard up, and a tap anywhere else puts it away.
+// The send button must not take the focus (that is what closed the keyboard on every send).
+for (const button of document.querySelectorAll('.addbar button')) {
+  button.addEventListener('pointerdown', e => e.preventDefault());
+  button.addEventListener('mousedown', e => e.preventDefault());
+  button.addEventListener('click', () => button.closest('.addbar').querySelector('input')?.focus());
+}
+addEventListener('click', e => {
+  const typing = document.activeElement?.closest?.('.addbar');
+  if (typing && !e.target.closest('.addbar')) document.activeElement.blur();
+});
+vv?.addEventListener('resize', placeBars);
+vv?.addEventListener('scroll', placeBars);
+addEventListener('focusin', () => setTimeout(placeBars, 50));
+addEventListener('focusout', () => setTimeout(placeBars, 50));
+
 addEventListener('online', () => setSync(false));
 addEventListener('offline', () => setSync(false));
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => { });
@@ -269,6 +366,6 @@ store.onUser(u => {
   user = u;
   $('login').hidden = !!u;
   $('app').hidden = !u;
-  if (!u) { data = { tasks: new Map(), categories: new Map() }; setMode(false); return; }
+  if (!u) { data = { tasks: new Map(), categories: new Map(), meta: new Map() }; setMode(false); return; }
   store.watch(u.uid, (state, error) => { data = state; setSync(state.pending, error); render(); });
 });

@@ -20,8 +20,8 @@ export async function createStore(config) {
     resetPassword: email => auth.sendPasswordResetEmail(a, email),
     signOut() { stops.forEach(stop => stop()); stops = []; return auth.signOut(a); },
     watch(uid, onChange) {
-      const state = { tasks: new Map(), categories: new Map(), pending: false };
-      for (const name of ['tasks', 'categories']) {
+      const state = { tasks: new Map(), categories: new Map(), meta: new Map(), pending: false };
+      for (const name of ['tasks', 'categories', 'meta']) {
         stops.push(fs.onSnapshot(fs.collection(db, 'users', uid, name), { includeMetadataChanges: true }, snap => {
           for (const change of snap.docChanges()) {
             if (change.type === 'removed') state[name].delete(change.doc.id);
@@ -42,10 +42,12 @@ function tryOutStore() {
   const key = 'desktop-todo-tryout';
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(key) || '{}'); } catch { }
-  if (!saved.tasks && new URLSearchParams(location.search).has('sample')) saved = sampleData();
+  // Starts with example data so screens can be checked right away; 見本データに戻す in settings starts over.
+  if (!saved.tasks) saved = sampleData();
   const state = {
     tasks: new Map(Object.entries(saved.tasks || {})),
     categories: new Map(Object.entries(saved.categories || {})),
+    meta: new Map(Object.entries(saved.meta || {})),
     pending: false,
   };
   let listener = null, userListener = null;
@@ -58,13 +60,13 @@ function tryOutStore() {
     watch(uid, onChange) { listener = onChange; onChange(state); },
     async put(uid, name, id, fields) {
       state[name].set(id, { ...state[name].get(id), ...fields, id, updatedAt: new Date().toISOString() });
-      try { localStorage.setItem(key, JSON.stringify({ tasks: Object.fromEntries(state.tasks), categories: Object.fromEntries(state.categories) })); } catch { }
+      try { localStorage.setItem(key, JSON.stringify({ tasks: Object.fromEntries(state.tasks), categories: Object.fromEntries(state.categories), meta: Object.fromEntries(state.meta) })); } catch { }
       listener?.(state);
     },
   };
 }
 
-// Example data for try-out mode (?demo&sample), used for screenshots.
+// Example data for try-out mode (the test page and local checks).
 function sampleData() {
   const day = n => { const d = new Date(); d.setDate(d.getDate() + n); return d.toLocaleDateString('sv-SE'); };
   const cats = { work: { name: '仕事', color: '#E07A5F', sortOrder: 0 }, home: { name: '家', color: '#7DB58F', sortOrder: 1 }, study: { name: '勉強', color: '#6FA8C9', sortOrder: 2 } };
@@ -83,5 +85,15 @@ function sampleData() {
       createdAt: new Date().toISOString(), timeLog: seconds ? [{ date: day(0), kind: '', seconds }] : [], deleted: false };
   });
   for (const [id, c] of Object.entries(cats)) cats[id] = { id, ...c, deleted: false };
-  return { tasks, categories: cats };
+  const lines = [['note', '（BGM：のんびりした曲）'], ['reimu', 'こんにちは、霊夢よ。'], ['marisa', '魔理沙だぜ。今日は何をするんだ？'],
+    ['reimu', 'おいしいお茶の淹れ方を紹介するわ。'], ['marisa', 'お茶なら毎日飲んでるけど、コツがあるのか？'], ['reimu', 'お湯の温度がいちばん大事なのよ。'],
+    ['marisa', '熱湯じゃだめなのか？'], ['reimu', '緑茶なら70〜80度くらいがいいわね。'], ['note', '（場面：急須のアップ）'], ['marisa', 'へえ、思ったより低いんだな。']]
+    .map(([who, text], i) => ({ id: 'line-' + i, who, text }));
+  return {
+    tasks, categories: cats, meta: {
+      note: { id: 'note', body: '買い物：牛乳、卵\n来週の撮影は火曜の午後' },
+      people: { id: 'people', list: [{ id: 'reimu', name: '霊夢', color: '#D9534F' }, { id: 'marisa', name: '魔理沙', color: '#D9A72E' }] },
+      'script_sample': { id: 'script_sample', kind: 'script', title: '第1話 お茶の淹れ方', lines, createdAt: new Date().toISOString(), deleted: false },
+    },
+  };
 }
