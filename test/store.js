@@ -42,7 +42,8 @@ function tryOutStore() {
   const key = 'desktop-todo-tryout';
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(key) || '{}'); } catch { }
-  if (!saved.tasks && new URLSearchParams(location.search).has('sample')) saved = sampleData();
+  // Starts with example data so screens can be checked right away; 見本データに戻す in settings starts over.
+  if (!saved.tasks) saved = sampleData();
   const state = {
     tasks: new Map(Object.entries(saved.tasks || {})),
     categories: new Map(Object.entries(saved.categories || {})),
@@ -65,7 +66,7 @@ function tryOutStore() {
   };
 }
 
-// Example data for try-out mode (?demo&sample), used for screenshots.
+// Example data for try-out mode (the test page and local checks).
 function sampleData() {
   const day = n => { const d = new Date(); d.setDate(d.getDate() + n); return d.toLocaleDateString('sv-SE'); };
   const cats = { work: { name: '仕事', color: '#E07A5F', sortOrder: 0 }, home: { name: '家', color: '#7DB58F', sortOrder: 1 }, study: { name: '勉強', color: '#6FA8C9', sortOrder: 2 } };

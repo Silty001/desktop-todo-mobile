@@ -223,6 +223,7 @@ $('settingsButton').addEventListener('click', () => { renderCategories(); $('cat
 function renderCategories() {
   $('accountText').textContent = store.tryOut ? 'お試しモード（同期なし）' : `ログイン中：${user.email}`;
   $('signOutButton').hidden = store.tryOut;
+  $('resetTryOut').hidden = !store.tryOut;
   $('catList').innerHTML = categories().map(c => `<li data-id="${esc(c.id)}">
     <select class="color" aria-label="色" style="--c:${esc(c.color)}">${PALETTE.map(([n, v]) => `<option value="${v}" ${v.toUpperCase() === String(c.color).toUpperCase() ? 'selected' : ''}>${n}</option>`).join('')}</select>
     <input class="name" value="${esc(c.name)}" maxlength="40" aria-label="名前">
@@ -257,6 +258,10 @@ $('addCat').addEventListener('click', () => {
   put('categories', newId(), { name, color: PALETTE[list.length % PALETTE.length][1], sortOrder: list.length ? Math.max(...list.map(c => c.sortOrder ?? 0)) + 1 : 0, deleted: false });
   $('catName').value = ''; $('catMessage').textContent = '';
   setTimeout(renderCategories);
+});
+$('resetTryOut').addEventListener('click', () => {
+  try { localStorage.removeItem('desktop-todo-tryout'); } catch { }
+  location.reload();
 });
 $('signOutButton').addEventListener('click', () => { $('settingsSheet').close(); store.signOut(); });
 
