@@ -2,13 +2,14 @@
 // Stored as meta/people { list: [{id, name, color}] } and meta/script_<id> { kind, title, lines: [{id, who, text}], createdAt, deleted }.
 // who is a person id, or "note" for ト書き (scene and BGM notes).
 import { enableDrag } from './drag.js';
+import { toast } from './ui.js';
 
 export const PERSON_COLORS = [['赤', '#D9534F'], ['山吹', '#D9A72E'], ['そら', '#6FA8C9'], ['わかば', '#7DB58F'], ['ふじ', '#A58BD1'], ['さくら', '#E88FA8'], ['コーラル', '#E07A5F'], ['こげ茶', '#8A766B']];
 const NOTE = 'note', NOTE_COLOR = '#B5A398';
 const CHARS_PER_MINUTE = 300;
 
 export function initScripts({ $, esc, put, meta, view, remember, confirmBox, newId, nowIso, afterAdd = () => { } }) {
-  let editingLine = null, undo = null, toastTimer = null;
+  let editingLine = null;
 
   const people = () => meta().get('people')?.list ?? [];
   const person = id => people().find(p => p.id === id);
@@ -36,7 +37,7 @@ export function initScripts({ $, esc, put, meta, view, remember, confirmBox, new
     const lines = script?.lines ?? [];
     $('scriptLines').innerHTML = lines.map(l => l.who === NOTE
       ? `<li class="sline note" data-id="${esc(l.id)}"><span class="txt">${esc(l.text)}</span></li>`
-      : `<li class="sline" data-id="${esc(l.id)}"><b style="color:${esc(shade(colorOf(l.who)))}">${esc(nameOf(l.who))}</b><span class="txt">${esc(l.text)}</span></li>`).join('');
+      : `<li class="sline" data-id="${esc(l.id)}"><b style="--pc:${esc(colorOf(l.who))}">${esc(nameOf(l.who))}</b><span class="txt">${esc(l.text)}</span></li>`).join('');
     $('scriptEmpty').hidden = lines.length > 0;
     $('scriptEmpty').textContent = script ? '下の欄からセリフを追加してください' : '「＋新しい台本」から始めましょう';
     renderStats(lines);
@@ -62,13 +63,6 @@ export function initScripts({ $, esc, put, meta, view, remember, confirmBox, new
     choice.value = [...choice.options].some(o => o.value === keep) ? keep : (people()[0]?.id ?? NOTE);
     $('speakerWrap').style.setProperty('--c', colorOf(choice.value));
   }
-  // Darker version of a person's color, so names stay readable on white.
-  function shade(hex) {
-    const n = parseInt(hex.slice(1), 16);
-    const f = c => Math.round(c * 0.82).toString(16).padStart(2, '0');
-    return '#' + f(n >> 16 & 255) + f(n >> 8 & 255) + f(n & 255);
-  }
-
   // ---- adding lines ----
   $('speaker').addEventListener('change', () => $('speakerWrap').style.setProperty('--c', colorOf($('speaker').value)));
   $('scriptAdd').addEventListener('submit', e => {
@@ -242,15 +236,6 @@ export function initScripts({ $, esc, put, meta, view, remember, confirmBox, new
     $('personName').value = ''; $('personMessage').textContent = '';
     setTimeout(renderPeople);
   });
-
-  function toast(text, onUndo) {
-    clearTimeout(toastTimer);
-    undo = onUndo;
-    $('toastText').textContent = text;
-    $('toast').hidden = false;
-    toastTimer = setTimeout(() => { $('toast').hidden = true; undo = null; }, 5000);
-  }
-  $('toastUndo').addEventListener('click', () => { undo?.(); undo = null; $('toast').hidden = true; });
 
   return { render, renderPeople };
 }

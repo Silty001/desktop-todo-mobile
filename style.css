@@ -150,7 +150,7 @@ label { display: grid; gap: 4px; font-size: 13px; color: var(--sub); margin-bott
 .scripts .tools { align-items: center; }
 .script-lines { list-style: none; margin: 0; padding: 4px 12px; background: var(--surface); border: 1.5px solid var(--line); border-radius: 14px; }
 .script-lines:empty { display: none; }
-.sline { display: flex; gap: 10px; padding: 7px 0; border-bottom: 1px dashed #f5dccb; font-size: 15px; line-height: 1.55; cursor: pointer; background: var(--surface);
+.sline { display: flex; gap: 10px; padding: 7px 0; border-bottom: 1px dashed var(--line); font-size: 15px; line-height: 1.55; cursor: pointer; background: var(--surface);
   -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .sline:last-child { border-bottom: 0; }
 .sline b { flex: none; width: 4.2em; font-size: 13px; padding-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -171,7 +171,7 @@ label { display: grid; gap: 4px; font-size: 13px; color: var(--sub); margin-bott
 #copyPreview { font-size: 13px; line-height: 1.6; background: var(--surface); }
 .toast {
   position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + env(safe-area-inset-bottom)); z-index: 30;
-  display: flex; gap: 12px; align-items: center; background: var(--ink); color: #fff; border-radius: 999px; padding: 8px 8px 8px 16px; font-size: 14px;
+  display: flex; gap: 12px; align-items: center; background: var(--toast); color: #fff; border-radius: 999px; padding: 8px 8px 8px 16px; font-size: 14px;
   box-shadow: 0 6px 18px #5b4a4240; white-space: nowrap;
 }
 .toast button { background: #fff3; color: #fff; padding: 6px 12px; border-radius: 999px; font-size: 13px; }
@@ -196,3 +196,67 @@ body.keyboard .speaker::before { left: 10px; }
   .views button svg { width: 15px; height: 15px; }
 }
 @media (max-width: 335px) { .views button svg { display: none; } }
+
+/* quick due/category button in the add bar */
+.pick { flex: none; display: inline-flex; align-items: center; gap: 4px; padding: 0 10px; height: 46px; border-radius: 999px; background: var(--surface); border: 1.5px solid var(--line); color: var(--sub); font-size: 13px; font-weight: 700; max-width: 120px; }
+.pick svg { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
+.pick span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pick span:empty { display: none; }
+.pick.set { border-color: var(--accent); color: var(--accent-text); }
+body.keyboard .pick { height: 38px; }
+#pickSheet .chips2 i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+
+/* swipe actions behind a task card */
+.list { position: relative; }
+.swipe-under { position: absolute; left: 0; right: 0; border-radius: 14px; display: flex; justify-content: space-between; align-items: center; padding: 0 18px; font-weight: 700; font-size: 14px; color: #fff; background: var(--line-strong); }
+.swipe-under span { opacity: 0; }
+.swipe-under.right { background: #7DB58F; } .swipe-under.right .r { opacity: 1; }
+.swipe-under.left { background: var(--danger); } .swipe-under.left .l { opacity: 1; }
+.swipe-under:not(.ready) { filter: saturate(.45) brightness(1.05); }
+.task { position: relative; z-index: 1; }
+
+/* names in a script take the person's color, a little darker on the light background */
+.sline b { color: color-mix(in srgb, var(--pc, #8A766B) 80%, #000); }
+:root { --toast: #5B4A42; }
+
+
+/* calendar */
+.tools { gap: 6px; flex-wrap: wrap; }
+.calendar { background: var(--surface); border: 1.5px solid var(--line); border-radius: 16px; padding: 10px; margin-bottom: 10px; }
+.cal-head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.cal-head b { flex: 1; text-align: center; }
+.cal-week, .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; }
+.cal-week span { font-size: 11px; color: var(--sub); padding-bottom: 4px; }
+.cal-week .sun, .day.sun span { color: #D9534F; } .cal-week .sat, .day.sat span { color: #4F86B5; }
+.day { background: none; border-radius: 10px; padding: 4px 0 3px; display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 44px; }
+.day span { font-size: 14px; color: var(--ink); width: 26px; height: 26px; line-height: 26px; border-radius: 50%; }
+.day.out { opacity: .38; }
+.day.today span { outline: 1.5px solid var(--accent); }
+.day.sel { background: var(--accent-fill); } .day.sel span { color: #fff !important; outline: none; }
+.day.late span { font-weight: 700; color: var(--danger); }
+.day i { display: flex; gap: 2px; height: 6px; }
+.day i b { width: 6px; height: 6px; border-radius: 50%; }
+.day.sel i b { box-shadow: 0 0 0 1px #fff; }
+
+/* work time in the task sheet */
+.sheet form { overflow-y: auto; max-height: calc(90dvh - 40px); }
+.time h3 { margin-top: 6px; }
+.time-top { display: flex; gap: 14px; align-items: center; }
+.donut-wrap { position: relative; width: 112px; height: 112px; flex: none; }
+.donut { width: 112px; height: 112px; transform: rotate(-90deg); }
+.donut circle { fill: none; stroke-width: 14; }
+.donut .empty { stroke: var(--soft); }
+.donut-mid { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.donut-mid b { font-size: 13px; } .donut-mid span { font-size: 11px; color: var(--sub); }
+.legend { list-style: none; margin: 0; padding: 0; flex: 1; min-width: 0; display: grid; gap: 4px; font-size: 13px; }
+.legend li { display: flex; gap: 6px; align-items: center; }
+.legend i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.legend span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.legend b { font-weight: 500; color: var(--sub); white-space: nowrap; font-size: 12px; }
+.timer-row { margin: 12px 0 8px; }
+.timer-row select { flex: 1; min-width: 0; }
+.timer-row button { flex: none; }
+.days { list-style: none; margin: 0 0 8px; padding: 0; font-size: 13px; }
+.days li { display: flex; gap: 10px; padding: 5px 0; border-bottom: 1px dashed var(--line); }
+.days .kinds { flex: 1; color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.meta .live { color: var(--accent-text); font-weight: 700; }
