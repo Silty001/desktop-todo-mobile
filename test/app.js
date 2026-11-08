@@ -4,6 +4,8 @@ import { enableDrag } from './drag.js';
 import { initScripts } from './script.js';
 import { enableSwipe } from './swipe.js';
 import { toast } from './ui.js';
+import { renderCalendar, ymd as dayKey } from './calendar.js';
+import { initWorkTime } from './worktime.js';
 
 // Same six colors as the PC app's category palette.
 const PALETTE = [['コーラル', '#E07A5F'], ['はちみつ', '#E3B04B'], ['わかば', '#7DB58F'], ['そら', '#6FA8C9'], ['ふじ', '#A58BD1'], ['さくら', '#E88FA8']];
@@ -15,7 +17,7 @@ let store, user = null, data = { tasks: new Map(), categories: new Map(), meta: 
 let drag = null, renderLater = false, swiping = false;
 // Due date and category for the next task added (set with the calendar button in the add bar).
 const addDraft = { due: null, cat: null };
-const view = load('desktop-todo-view', { filter: 'open', category: '', byDue: false, page: 'todo' });
+const view = load('desktop-todo-view', { filter: 'open', category: '', byDue: false, page: 'todo', mode: 'list', calDay: '', calMonth: '' });
 let editing = null, signUpMode = false;
 
 function load(key, fallback) { try { return { ...fallback, ...JSON.parse(localStorage.getItem(key) || '{}') }; } catch { return fallback; } }
@@ -70,9 +72,19 @@ function render() {
     .filter(t => !view.category || t.categoryId === view.category)
     .sort(view.byDue ? byDue : byOrder);
   if (view.filter === 'all') shown = [...shown.filter(t => !t.completed), ...shown.filter(t => t.completed)];
+  const cal = view.mode === 'calendar';
+  $('calButton').textContent = cal ? 'リストに戻る' : 'カレンダー';
+  $('calendar').hidden = !cal;
+  if (cal) {
+    const sel = view.calDay || dayKey(new Date());
+    const month = view.calMonth || sel.slice(0, 7);
+    renderCalendar($('calendar'), { month: new Date(+month.slice(0, 4), +month.slice(5, 7) - 1, 1), selected: sel, tasks: all, categories: categories(), esc });
+    shown = shown.filter(t => t.dueDate === sel);
+  }
   $('list').innerHTML = shown.map(card).join('');
   $('emptyText').hidden = shown.length > 0;
-  $('emptyText').textContent = view.filter === 'done' ? '完了したタスクはありません' : 'タスクはありません';
+  $('emptyText').textContent = cal ? 'この日が納期のタスクはありません' : view.filter === 'done' ? '完了したタスクはありません' : 'タスクはありません';
+  work.tick();
 }
 
 function card(t) {
@@ -84,7 +96,8 @@ function card(t) {
     meta.push(`<span class="${t.completed ? '' : n < 0 ? 'overdue' : n <= 1 ? 'soon' : ''}">${esc(dueLabel(t))}</span>`);
   }
   const secs = totalSeconds(t);
-  if (secs > 0) meta.push(`<span>作業 ${duration(secs)}</span>`);
+  if (work.running()?.id === t.id) meta.push(`<span class="live" data-timer="${esc(t.id)}" data-base="${secs}"></span>`);
+  else if (secs > 0) meta.push(`<span>作業 ${duration(secs)}</span>`);
   return `<li class="task ${t.completed ? 'done' : ''}" data-id="${esc(t.id)}" style="--cat:${esc(c?.color || NO_CATEGORY)}">
     <button class="check" aria-label="${t.completed ? '未完了に戻す' : '完了にする'}"><svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9"/></svg></button>
     <div class="body"><p class="title">${esc(t.title)}</p>${meta.length ? `<p class="meta">${meta.join('')}</p>` : ''}</div>
@@ -134,7 +147,7 @@ $('addForm').addEventListener('submit', e => {
   if (!title) return;
   const order = Math.max(-1, ...tasks().map(t => t.sortOrder ?? 0)) + 1;
   put('tasks', newId(), {
-    title, completed: false, completedAt: null, dueDate: addDraft.due, categoryId: addDraft.cat === null ? (view.category || null) : (addDraft.cat || null),
+    title, completed: false, completedAt: null, dueDate: addDraft.due ?? (view.mode === 'calendar' ? (view.calDay || dayKey(new Date())) : null), categoryId: addDraft.cat === null ? (view.category || null) : (addDraft.cat || null),
     sortOrder: order, createdAt: nowIso(), timeLog: [], deleted: false,
   });
   $('addInput').value = '';
@@ -171,11 +184,13 @@ $('list').addEventListener('click', e => {
 
 // Completing and deleting can always be undone for a few seconds.
 function setDone(t, completed) {
+  if (completed && work.running()?.id === t.id) work.stop();
   const before = { completed: !!t.completed, completedAt: t.completedAt ?? null };
   put('tasks', t.id, { completed, completedAt: completed ? nowIso() : null });
   toast(completed ? '完了にしました' : '未完了に戻しました', () => put('tasks', t.id, before));
 }
 function removeTask(t) {
+  if (work.running()?.id === t.id) work.stop();
   put('tasks', t.id, { deleted: true });
   toast('タスクを削除しました', () => put('tasks', t.id, { deleted: false }));
 }
@@ -187,6 +202,21 @@ enableSwipe($('list'), {
   onState: on => { swiping = on; if (!on && renderLater) { renderLater = false; setTimeout(render); } },
   onRight: id => { const t = data.tasks.get(id); if (t) setDone(t, !t.completed); },
   onLeft: id => { const t = data.tasks.get(id); if (t) removeTask(t); },
+});
+
+const work = initWorkTime({ $, esc, put, task: id => data.tasks.get(id), allTasks: () => tasks(), onChange: () => render() });
+
+$('calButton').addEventListener('click', () => { view.mode = view.mode === 'calendar' ? 'list' : 'calendar'; remember(); render(); });
+$('calendar').addEventListener('click', e => {
+  const day = e.target.closest('[data-day]'), move = e.target.closest('[data-move]');
+  if (day) { view.calDay = day.dataset.day; view.calMonth = day.dataset.day.slice(0, 7); }
+  if (move) {
+    const sel = view.calDay || dayKey(new Date());
+    const m = view.calMonth || sel.slice(0, 7);
+    if (move.dataset.move === '0') { view.calDay = dayKey(new Date()); view.calMonth = view.calDay.slice(0, 7); }
+    else { const d = new Date(+m.slice(0, 4), +m.slice(5, 7) - 1 + Number(move.dataset.move), 1); view.calMonth = dayKey(d).slice(0, 7); }
+  }
+  if (day || move) { remember(); render(); }
 });
 
 // ---- quick due date and category for the next task ----
@@ -228,8 +258,7 @@ function openTask(t) {
   $('editDue').value = t.dueDate || '';
   $('editCategory').innerHTML = `<option value="">なし</option>` + categories().map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
   $('editCategory').value = category(t.categoryId) && !category(t.categoryId).deleted ? t.categoryId : '';
-  const secs = totalSeconds(t);
-  $('editTime').textContent = secs > 0 ? `作業時間 合計 ${duration(secs)}（内訳と計測はPCアプリで）` : '';
+  work.renderSection(t);
   $('taskSheet').showModal();
 }
 
@@ -238,6 +267,7 @@ $('clearDue').addEventListener('click', () => { $('editDue').value = ''; });
 $('taskSheet').querySelector('form').addEventListener('submit', saveEdit);
 $('taskSheet').addEventListener('cancel', saveEdit);
 function saveEdit() {
+  work.closeSection();
   const t = data.tasks.get(editing);
   editing = null;
   if (!t || t.deleted) return;
