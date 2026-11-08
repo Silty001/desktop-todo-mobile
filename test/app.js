@@ -2,15 +2,19 @@ import { firebaseConfig } from './firebase-config.js';
 import { createStore } from './store.js';
 import { enableDrag } from './drag.js';
 import { initScripts } from './script.js';
+import { enableSwipe } from './swipe.js';
+import { toast } from './ui.js';
 
 // Same six colors as the PC app's category palette.
 const PALETTE = [['コーラル', '#E07A5F'], ['はちみつ', '#E3B04B'], ['わかば', '#7DB58F'], ['そら', '#6FA8C9'], ['ふじ', '#A58BD1'], ['さくら', '#E88FA8']];
-const NO_CATEGORY = '#F5DCCB';
+const NO_CATEGORY = 'var(--line-strong)';
 const WEEK = '日月火水木金土';
 const $ = id => document.getElementById(id);
 
 let store, user = null, data = { tasks: new Map(), categories: new Map(), meta: new Map() };
-let drag = null, renderLater = false;
+let drag = null, renderLater = false, swiping = false;
+// Due date and category for the next task added (set with the calendar button in the add bar).
+const addDraft = { due: null, cat: null };
 const view = load('desktop-todo-view', { filter: 'open', category: '', byDue: false, page: 'todo' });
 let editing = null, signUpMode = false;
 
@@ -48,7 +52,7 @@ function byDue(a, b) { return (a.dueDate ? 0 : 1) - (b.dueDate ? 0 : 1) || Strin
 
 // ---- rendering ----
 function render() {
-  if (drag?.busy) { renderLater = true; return; }
+  if (drag?.busy || swiping) { renderLater = true; return; }
   renderMemo();
   const all = tasks();
   const open = all.filter(t => !t.completed);
@@ -130,10 +134,11 @@ $('addForm').addEventListener('submit', e => {
   if (!title) return;
   const order = Math.max(-1, ...tasks().map(t => t.sortOrder ?? 0)) + 1;
   put('tasks', newId(), {
-    title, completed: false, completedAt: null, dueDate: null, categoryId: view.category || null,
+    title, completed: false, completedAt: null, dueDate: addDraft.due, categoryId: addDraft.cat === null ? (view.category || null) : (addDraft.cat || null),
     sortOrder: order, createdAt: nowIso(), timeLog: [], deleted: false,
   });
   $('addInput').value = '';
+  addDraft.due = null; addDraft.cat = null; showDraft();
   if (view.filter === 'done') { view.filter = 'open'; remember(); render(); }
 });
 
@@ -160,11 +165,62 @@ $('list').addEventListener('click', e => {
   const li = e.target.closest('.task');
   if (!li) return;
   const t = data.tasks.get(li.dataset.id);
-  if (e.target.closest('.check')) {
-    const completed = !t.completed;
-    put('tasks', t.id, { completed, completedAt: completed ? nowIso() : null });
-  } else openTask(t);
+  if (e.target.closest('.check')) setDone(t, !t.completed);
+  else openTask(t);
 });
+
+// Completing and deleting can always be undone for a few seconds.
+function setDone(t, completed) {
+  const before = { completed: !!t.completed, completedAt: t.completedAt ?? null };
+  put('tasks', t.id, { completed, completedAt: completed ? nowIso() : null });
+  toast(completed ? '完了にしました' : '未完了に戻しました', () => put('tasks', t.id, before));
+}
+function removeTask(t) {
+  put('tasks', t.id, { deleted: true });
+  toast('タスクを削除しました', () => put('tasks', t.id, { deleted: false }));
+}
+
+// Swipe right to complete (or reopen), left to delete.
+enableSwipe($('list'), {
+  enabled: () => !drag?.busy,
+  rightLabel: id => data.tasks.get(id)?.completed ? '未完了に戻す' : '完了',
+  onState: on => { swiping = on; if (!on && renderLater) { renderLater = false; setTimeout(render); } },
+  onRight: id => { const t = data.tasks.get(id); if (t) setDone(t, !t.completed); },
+  onLeft: id => { const t = data.tasks.get(id); if (t) removeTask(t); },
+});
+
+// ---- quick due date and category for the next task ----
+const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+function dueFor(kind) {
+  const d = today();
+  if (kind === 'tomorrow') d.setDate(d.getDate() + 1);
+  if (kind === 'weekend') d.setDate(d.getDate() + (6 - d.getDay() + 7) % 7);
+  if (kind === 'nextweek') d.setDate(d.getDate() + 7);
+  return ymd(d);
+}
+function shortDate(s) {
+  if (!s) return '';
+  const n = daysLeft(s);
+  if (n === 0) return '今日'; if (n === 1) return '明日';
+  const d = parseDate(s); return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+function showDraft() {
+  const parts = [shortDate(addDraft.due), addDraft.cat ? category(addDraft.cat)?.name ?? '' : ''].filter(Boolean);
+  $('addPickText').textContent = parts.join('・');
+  $('addPick').classList.toggle('set', parts.length > 0);
+}
+function renderPick() {
+  for (const b of $('pickDue').children) b.classList.toggle('on', (b.dataset.due ? dueFor(b.dataset.due) : null) === addDraft.due);
+  $('pickDate').value = addDraft.due ?? '';
+  const cat = addDraft.cat ?? (view.category || null);
+  $('pickCat').innerHTML = [['', 'なし', ''], ...categories().map(c => [c.id, c.name, c.color])].map(([id, name, color]) =>
+    `<button type="button" data-cat="${esc(id)}" class="${(cat ?? '') === id ? 'on' : ''}">${color ? `<i style="background:${esc(color)}"></i>` : ''}${esc(name)}</button>`).join('');
+}
+$('addPick').addEventListener('click', () => { renderPick(); $('pickSheet').showModal(); });
+$('pickDue').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; addDraft.due = b.dataset.due ? dueFor(b.dataset.due) : null; renderPick(); showDraft(); });
+$('pickDate').addEventListener('change', () => { addDraft.due = $('pickDate').value || null; renderPick(); showDraft(); });
+$('pickCat').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; addDraft.cat = b.dataset.cat || ''; renderPick(); showDraft(); });
+$('pickSheet').querySelector('form').addEventListener('submit', () => setTimeout(() => $('addInput').focus(), 50));
 
 function openTask(t) {
   editing = t.id;
@@ -194,15 +250,16 @@ function saveEdit() {
 }
 $('deleteTask').addEventListener('click', async () => {
   const t = data.tasks.get(editing);
-  if (!t || !await confirmBox(`「${t.title}」を削除しますか？`)) return;
+  if (!t) return;
   editing = null;
-  put('tasks', t.id, { deleted: true });
   $('taskSheet').close();
+  removeTask(t);
 });
 $('clearDoneButton').addEventListener('click', async () => {
   const done = tasks().filter(t => t.completed);
   if (!await confirmBox(`完了したタスク${done.length}件を削除しますか？`)) return;
   done.forEach(t => put('tasks', t.id, { deleted: true }));
+  toast(`${done.length}件を削除しました`, () => done.forEach(t => put('tasks', t.id, { deleted: false })));
 });
 
 $('tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { view.filter = b.dataset.filter; remember(); render(); } });
@@ -363,7 +420,7 @@ function alignToBar() {
 }
 // Typing like a chat app: sending keeps the keyboard up, and a tap anywhere else puts it away.
 // The send button must not take the focus (that is what closed the keyboard on every send).
-for (const button of document.querySelectorAll('.addbar button')) {
+for (const button of document.querySelectorAll('.addbar button:not(.pick)')) {
   button.addEventListener('pointerdown', e => e.preventDefault());
   button.addEventListener('mousedown', e => e.preventDefault());
   button.addEventListener('click', () => button.closest('.addbar').querySelector('input')?.focus());

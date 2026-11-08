@@ -150,7 +150,7 @@ label { display: grid; gap: 4px; font-size: 13px; color: var(--sub); margin-bott
 .scripts .tools { align-items: center; }
 .script-lines { list-style: none; margin: 0; padding: 4px 12px; background: var(--surface); border: 1.5px solid var(--line); border-radius: 14px; }
 .script-lines:empty { display: none; }
-.sline { display: flex; gap: 10px; padding: 7px 0; border-bottom: 1px dashed #f5dccb; font-size: 15px; line-height: 1.55; cursor: pointer; background: var(--surface);
+.sline { display: flex; gap: 10px; padding: 7px 0; border-bottom: 1px dashed var(--line); font-size: 15px; line-height: 1.55; cursor: pointer; background: var(--surface);
   -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .sline:last-child { border-bottom: 0; }
 .sline b { flex: none; width: 4.2em; font-size: 13px; padding-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -171,7 +171,7 @@ label { display: grid; gap: 4px; font-size: 13px; color: var(--sub); margin-bott
 #copyPreview { font-size: 13px; line-height: 1.6; background: var(--surface); }
 .toast {
   position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + env(safe-area-inset-bottom)); z-index: 30;
-  display: flex; gap: 12px; align-items: center; background: var(--ink); color: #fff; border-radius: 999px; padding: 8px 8px 8px 16px; font-size: 14px;
+  display: flex; gap: 12px; align-items: center; background: var(--toast); color: #fff; border-radius: 999px; padding: 8px 8px 8px 16px; font-size: 14px;
   box-shadow: 0 6px 18px #5b4a4240; white-space: nowrap;
 }
 .toast button { background: #fff3; color: #fff; padding: 6px 12px; border-radius: 999px; font-size: 13px; }
@@ -196,3 +196,41 @@ body.keyboard .speaker::before { left: 10px; }
   .views button svg { width: 15px; height: 15px; }
 }
 @media (max-width: 335px) { .views button svg { display: none; } }
+
+/* quick due/category button in the add bar */
+.pick { flex: none; display: inline-flex; align-items: center; gap: 4px; padding: 0 10px; height: 46px; border-radius: 999px; background: var(--surface); border: 1.5px solid var(--line); color: var(--sub); font-size: 13px; font-weight: 700; max-width: 120px; }
+.pick svg { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
+.pick span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pick span:empty { display: none; }
+.pick.set { border-color: var(--accent); color: var(--accent-text); }
+body.keyboard .pick { height: 38px; }
+#pickSheet .chips2 i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+
+/* swipe actions behind a task card */
+.list { position: relative; }
+.swipe-under { position: absolute; left: 0; right: 0; border-radius: 14px; display: flex; justify-content: space-between; align-items: center; padding: 0 18px; font-weight: 700; font-size: 14px; color: #fff; background: var(--line-strong); }
+.swipe-under span { opacity: 0; }
+.swipe-under.right { background: #7DB58F; } .swipe-under.right .r { opacity: 1; }
+.swipe-under.left { background: var(--danger); } .swipe-under.left .l { opacity: 1; }
+.swipe-under:not(.ready) { filter: saturate(.45) brightness(1.05); }
+.task { position: relative; z-index: 1; }
+
+/* names in a script take the person's color, a little darker on the light background */
+.sline b { color: color-mix(in srgb, var(--pc, #8A766B) 80%, #000); }
+:root { --toast: #5B4A42; }
+
+/* dark mode: follows the phone's setting */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1F1A18; --nav: #2A2320; --surface: #2B2421; --soft: #3A302B; --line: #43372F; --line-strong: #5A4A41;
+    --accent: #EE9378; --accent-fill: #D9705A; --accent-text: #F2A68E; --ink: #F3E9E3; --sub: #C2B1A7; --faint: #8E7E75;
+    --danger: #EF8576; --danger-soft: #452823; --toast: #4A3E38;
+    color-scheme: dark;
+  }
+  button.danger { background: #4a2823; }
+  .sline b { color: var(--pc, #C2B1A7); }
+  .tabs button.on { box-shadow: none; }
+  .views button.on { box-shadow: none; }
+  .sheet::backdrop { background: #000a; }
+  .install img, .login-icon { box-shadow: 0 0 0 1px #ffffff14; }
+}
