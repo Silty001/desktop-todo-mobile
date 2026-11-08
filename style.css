@@ -184,3 +184,15 @@ body.keyboard .addbar input { padding: 7px 12px; }
 body.keyboard .addbar .round { width: 38px; height: 38px; font-size: 21px; }
 body.keyboard .speaker select { padding: 7px 8px 7px 24px; font-size: 13px; }
 body.keyboard .speaker::before { left: 10px; }
+
+/* header: labels never wrap; the sync state sits under the buttons so they keep their width */
+.top > div { min-width: 0; }
+.views button { white-space: nowrap; flex: none; }
+.status { display: flex; gap: 10px; align-items: baseline; min-height: 1.2em; }
+.status .sync:not(:empty)::before { content: "・"; margin-right: 2px; }
+#countText[hidden] + .sync::before { content: none; }
+@media (max-width: 370px) {
+  .views button { padding: 7px 10px; gap: 4px; }
+  .views button svg { width: 15px; height: 15px; }
+}
+@media (max-width: 335px) { .views button svg { display: none; } }
