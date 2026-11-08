@@ -219,21 +219,6 @@ body.keyboard .pick { height: 38px; }
 .sline b { color: color-mix(in srgb, var(--pc, #8A766B) 80%, #000); }
 :root { --toast: #5B4A42; }
 
-/* dark mode: follows the phone's setting */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #1F1A18; --nav: #2A2320; --surface: #2B2421; --soft: #3A302B; --line: #43372F; --line-strong: #5A4A41;
-    --accent: #EE9378; --accent-fill: #D9705A; --accent-text: #F2A68E; --ink: #F3E9E3; --sub: #C2B1A7; --faint: #8E7E75;
-    --danger: #EF8576; --danger-soft: #452823; --toast: #4A3E38;
-    color-scheme: dark;
-  }
-  button.danger { background: #4a2823; }
-  .sline b { color: var(--pc, #C2B1A7); }
-  .tabs button.on { box-shadow: none; }
-  .views button.on { box-shadow: none; }
-  .sheet::backdrop { background: #000a; }
-  .install img, .login-icon { box-shadow: 0 0 0 1px #ffffff14; }
-}
 
 /* calendar */
 .tools { gap: 6px; flex-wrap: wrap; }
